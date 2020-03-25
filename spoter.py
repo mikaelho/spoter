@@ -244,17 +244,11 @@ if __name__ == '__main__':
     except ModuleNotFoundError:
         pass  # Rely on environment variables
 
-    spoter = Spoter(client_id=client_id, client_secret=client_secret)
-
-    from pprint import pprint
-
-    print('User info')
-    print('--------------------')
-    pprint(spoter.get_user_info())
+    spot = Spoter(client_id=client_id, client_secret=client_secret)
 
     print()
     print('Search for playlists for Medieval ambient music')
     print('-----------------------------------------------')
-    result = spoter.search('Medieval ambient', 'playlist')
+    result = spot.search('Medieval ambient', 'playlist')
     for item in result['playlists']['items']:
         print(item['name'])
