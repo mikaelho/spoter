@@ -12,7 +12,6 @@ import os
 import os.path
 import threading
 import time
-from typing import Dict, Tuple, Sequence
 from urllib.parse import urlencode, quote, unquote
 import webbrowser
 
@@ -150,9 +149,10 @@ class Spoter:
         req = requests.post(self.token_endpoint, data=token_params)
         result = req.json()
         if 'access_token' in result:
-            with open(self.refresh_token_filename, 'w') as fp:
-                fp.write(result['refresh_token'])
             self.access_token = result['access_token']
+            if 'refresh_token' in result:
+                with open(self.refresh_token_filename, 'w') as fp:
+                    fp.write(result['refresh_token'])
             return (True, result)
         return (False, result)
 
@@ -171,14 +171,14 @@ class Spoter:
             if result.status_code < 400:
                 return result
 
-            if result.json()['error']['code'] == 'unauthenticated':
+            if result.status_code == 401:
                 self.access_token = None
                 headers['Authorization'] = 'Bearer ' + self._get_access_token()
                 result = func(self, *args, **kwargs)
                 if result.status_code < 400:
                     return result
             raise Exception(
-                f'Error in making a Spotify Web API request', result)
+                f'Error in making a Spotify Web API request', result.json())
 
         return wrapper
 
@@ -227,6 +227,10 @@ class Spoter:
     def get_user_info(self):
         return self.get(f'{self.user_info_url}').json()
 
+    def search(self, query_string, content_type, market=None, limit=None, offset=None, include_external=False):
+        """ See https://developer.spotify.com/documentation/web-api/reference/search/search/ """
+
+        return self.get(f'{self.base_url}/search?q={quote(query_string)}&type={content_type}').json()
 
 if __name__ == '__main__':
 
@@ -247,3 +251,10 @@ if __name__ == '__main__':
     print('User info')
     print('--------------------')
     pprint(spoter.get_user_info())
+
+    print()
+    print('Search for playlists for Medieval ambient music')
+    print('-----------------------------------------------')
+    result = spoter.search('Medieval ambient', 'playlist')
+    for item in result['playlists']['items']:
+        print(item['name'])
