@@ -14,7 +14,7 @@ Here's a quick example of initializing the library and searching for specific st
 
 You application needs to have a client ID and a client secret. See the instructions [here](https://developer.spotify.com/documentation/general/guides/app-settings/#register-your-app) for registering the app and to get these. Do not forget to add this Redirect URI: http://localhost:8089/oauth2callback
 
-You can also provide the client id and secret in the following environment variables:
+As an alternative to the init parameters in the example above, you can also provide the client id and secret in the following environment variables:
 * `SPOTIFY_CLIENT_ID`
 * `SPOTIFY_CLIENT_SECRET`
 
