@@ -29,7 +29,6 @@ class Spoter:
     base_url = 'https://api.spotify.com/v1'
 
     user_info_url = f'{base_url}/me'
-    playlists = f'{base_url}/me/playlists'
     remove_from_playlist = f'{base_url}/playlists/{{playlist_id}}/tracks'
 
     def __init__(self,
@@ -230,7 +229,18 @@ class Spoter:
     def search(self, query_string, content_type, market=None, limit=None, offset=None, include_external=False):
         """ See https://developer.spotify.com/documentation/web-api/reference/search/search/ """
 
-        return self.get(f'{self.base_url}/search?q={quote(query_string)}&type={content_type}').json()
+        result = self.get(f'{self.base_url}/search?q={quote(query_string)}&type={content_type}').json()
+        try:
+            return result['playlists']['items']
+        except KeyError:
+            return []
+        
+    def my_playlists(self):
+        result = self.get(f'{self.base_url}/me/playlists').json()
+        try:
+            return result['items']
+        except KeyError:
+            return []
 
 if __name__ == '__main__':
 
@@ -250,5 +260,17 @@ if __name__ == '__main__':
     print('Search for playlists for Medieval ambient music')
     print('-----------------------------------------------')
     result = spot.search('Medieval ambient', 'playlist')
-    for item in result['playlists']['items']:
+    for item in result:
         print(item['name'])
+        
+    print()
+    print('My playlists')
+    print('------------')
+    result = spot.my_playlists()
+    for item in result:
+        print(item['name'])
+    
+    '''
+    from pprint import pprint
+    pprint(result)
+    '''
