@@ -223,24 +223,39 @@ class Spoter:
         """
         return self.get(f'{self.item_endpoint}/{item_id}').json()
 
+    class DotDict(dict):
+
+        def __getattr__(self, key, oga=object.__getattribute__):
+            try:
+                return self[key]
+            except KeyError: pass
+
+            return oga(self, key)
+
+        def __setattr__(self, key, value, osa=object.__setattr__):
+            try:
+                oda(self, key, value)
+            except AttributeError: pass
+            self[key] = value
+
+        def __delattr__(self, key, oda=object.__delattr__):
+            try:
+                del self[key]
+                return
+            except KeyError: pass
+            oda(self, key)
+
     def get_user_info(self):
         return self.get(f'{self.user_info_url}').json()
 
     def search(self, query_string, content_type, market=None, limit=None, offset=None, include_external=False):
         """ See https://developer.spotify.com/documentation/web-api/reference/search/search/ """
 
-        result = self.get(f'{self.base_url}/search?q={quote(query_string)}&type={content_type}').json()
-        try:
-            return result['playlists']['items']
-        except KeyError:
-            return []
-        
+        return self.get(f'{self.base_url}/search?q={quote(query_string)}&type={content_type}').json()
+
     def my_playlists(self):
-        result = self.get(f'{self.base_url}/me/playlists').json()
-        try:
-            return result['items']
-        except KeyError:
-            return []
+        return self.get(f'{self.base_url}/me/playlists').json()
+
 
 if __name__ == '__main__':
 
@@ -260,14 +275,14 @@ if __name__ == '__main__':
     print('Search for playlists for Medieval ambient music')
     print('-----------------------------------------------')
     result = spot.search('Medieval ambient', 'playlist')
-    for item in result:
+    for item in result['playlists']['items']:
         print(item['name'])
         
     print()
     print('My playlists')
     print('------------')
     result = spot.my_playlists()
-    for item in result:
+    for item in result['items']:
         print(item['name'])
     
     '''
