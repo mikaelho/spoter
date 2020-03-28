@@ -22,4 +22,16 @@ On first run, a web browser is opened for you to enter your Spotify username and
 
 The default location and file name for the refresh token file is '~/Documents/spotify_refresh_token' – you can change it with the optional `refresh_token_file` Spoter init parameter.
 
-Default scope is `user-library-read`. You can provide a comma-separated list of additional scopes with the `scope` Spoter init parameter. See [here](https://developer.spotify.com/documentation/general/guides/scopes/) for the different Spotify authentication scopes.
+Default scope is `user-library-read`. You can provide a comma-separated list of scopes with the `scope` Spoter init parameter. See [here](https://developer.spotify.com/documentation/general/guides/scopes/) for the different Spotify authentication scopes.
+
+## API methods
+
+#### get_user_info()
+
+#### search(query_string, content_type, market=None, limit=None, offset=None)
+
+#### user_playlists()
+
+#### playlist_tracks(playlist_id)
+
+#### delete_tracks_from_playlist(playlist_id, tracks)

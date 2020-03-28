@@ -12,7 +12,7 @@ import os
 import os.path
 import threading
 import time
-from urllib.parse import urlencode, quote, unquote
+from urllib.parse import urlencode, urljoin, quote, unquote, urlparse, parse_qs, urlunparse
 import webbrowser
 
 import bottle
@@ -177,7 +177,7 @@ class Spoter:
                 if result.status_code < 400:
                     return result
             raise Exception(
-                f'Error in making a Spotify Web API request', result.json())
+                f'Error in making a Spotify Web API request', result)
 
         return wrapper
 
@@ -186,9 +186,9 @@ class Spoter:
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            item_id = args[0]
-            if type(item_id) is dict:
-                item_id = item_id['id']
+            try:
+                item_id = args[0]['id']
+            except (IndexError, KeyError): pass
             return func(self, item_id, *args[1:], **kwargs)
 
         return wrapper
@@ -211,53 +211,44 @@ class Spoter:
     def delete(self, *args, **kwargs):
         return requests.delete(*args, **kwargs)
 
-    # docgen: Single item manipulation
-
-    @flexible_id
-    def get_item(self, item_id):
-        """
-        Returns a dict describing the item.
-
-        `item_id` can be either a item ID or a dict with an `id` item that is
-        used instead.
-        """
-        return self.get(f'{self.item_endpoint}/{item_id}').json()
-
-    class DotDict(dict):
-
-        def __getattr__(self, key, oga=object.__getattribute__):
-            try:
-                return self[key]
-            except KeyError: pass
-
-            return oga(self, key)
-
-        def __setattr__(self, key, value, osa=object.__setattr__):
-            try:
-                oda(self, key, value)
-            except AttributeError: pass
-            self[key] = value
-
-        def __delattr__(self, key, oda=object.__delattr__):
-            try:
-                del self[key]
-                return
-            except KeyError: pass
-            oda(self, key)
+    def expand(self, url, **params):
+        url_parts = list(urlparse(url))
+        query = dict(parse_qs(url_parts[4]))
+        query.update(params)
+        url_parts[4] = urlencode(query, doseq=True)
+        return urlunparse(url_parts)
 
     def get_user_info(self):
         return self.get(f'{self.user_info_url}').json()
 
-    def search(self, query_string, content_type, market=None, limit=None, offset=None, include_external=False):
+    def search(self, query_string, content_type, **kwargs):
         """ See https://developer.spotify.com/documentation/web-api/reference/search/search/ """
+        url = f'{self.base_url}/search?q={quote(query_string)}&type={content_type}'
+        url = self.expand(url, **kwargs)
+        return self.get(url).json()
 
-        return self.get(f'{self.base_url}/search?q={quote(query_string)}&type={content_type}').json()
-
-    def my_playlists(self):
+    def user_playlists(self):
         return self.get(f'{self.base_url}/me/playlists').json()
+
+    @flexible_id
+    def playlist_tracks(self, playlist_id, **kwargs):
+        url = f'{self.base_url}/playlists/{playlist_id}/tracks'
+        url = self.expand(url, **kwargs)
+        return self.get(url).json()
+
+    @flexible_id
+    def delete_tracks_from_playlist(self, playlist_id, tracks):
+        """ tracks should be a list of track URIs to be removed. """
+        url = f'{self.base_url}/playlists/{playlist_id}/tracks'
+        data = {
+            "tracks": [ { "uri": uri } for uri in tracks ]
+        }
+        return self.delete(url, data=data)
 
 
 if __name__ == '__main__':
+
+    from pprint import pprint
 
     client_id = None
     client_secret = None
@@ -272,18 +263,22 @@ if __name__ == '__main__':
     spot = Spoter(client_id=client_id, client_secret=client_secret)
 
     print()
-    print('Search for playlists for Medieval ambient music')
-    print('-----------------------------------------------')
-    result = spot.search('Medieval ambient', 'playlist')
+    print('Search for 5 first playlists for "Medieval ambient" music')
+    print('---------------------------------------------------------')
+    result = spot.search('Medieval ambient', 'playlist', market='FI', limit=5)
     for item in result['playlists']['items']:
         print(item['name'])
         
     print()
-    print('My playlists')
-    print('------------')
-    result = spot.my_playlists()
-    for item in result['items']:
-        print(item['name'])
+    print('Tracks for the last playlist in my playlists')
+    print('--------------------------------------------')
+    result = spot.user_playlists()
+    playlist = result['items'][-1]
+    pprint(playlist)
+    tracks = spot.playlist_tracks(playlist, limit=5)
+    for track in tracks['items']:
+        print(track['track']['name'])
+
     
     '''
     from pprint import pprint
