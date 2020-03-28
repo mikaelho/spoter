@@ -219,15 +219,15 @@ class Spoter:
 
     @staticmethod
     def expand(url, **params):
-        """ Adds url parameters to the url.
+        """ Adds url parameters to the url. Parameters with the value of None are not included.
 
         >>> Spoter.expand('https://test.com', foo='bar')
         'https://test.com?foo=bar'
 
-        >>> Spoter.expand('https://test.com/search?q=foo&type=track', market='FI', limit=50)
+        >>> Spoter.expand('https://test.com/search?q=foo&type=track', market='FI', limit=50, offset=None)
         'https://test.com/search?q=foo&type=track&market=FI&limit=50'
         """
-
+        params = dict(filter(lambda item: item[1] is not None, params.items()))
         url_parts = list(urlparse(url))
         query = dict(parse_qs(url_parts[4]))
         query.update(params)
@@ -262,22 +262,22 @@ class Spoter:
     def get_user_info(self):
         return self.get(f'{self.user_info_url}').json()
 
-    def search(self, query_string, content_type, **kwargs):
+    def search(self, query_string, content_type, market=None, limit=None, offset=None, include_external=None):
         """ See https://developer.spotify.com/documentation/web-api/reference/search/search/ """
         url = f'{self.base_url}/search?q={quote(query_string)}&type={content_type}'
-        url = self.expand(url, **kwargs)
+        url = self.expand(url, market=market, limit=limit, offset=offset, include_external=include_external)
         return self.get(url).json()
 
-    def user_playlists(self, **kwargs):
+    def user_playlists(self, limit=None, offset=None):
 
         url = f'{self.base_url}/me/playlists'
-        url = self.expand(url, **kwargs)
+        url = self.expand(url, limit=limit, offset=offset)
         return self.get(url).json()
 
     @flexible_id
-    def playlist_tracks(self, playlist_id, **kwargs):
+    def playlist_tracks(self, playlist_id, limit=None, offset=None):
         url = f'{self.base_url}/playlists/{playlist_id}/tracks'
-        url = self.expand(url, **kwargs)
+        url = self.expand(url, limit=limit, offset=offset)
         return self.get(url).json()
 
     @flexible_id
