@@ -142,7 +142,7 @@ class Spoter:
             self.access_token = None
             os.remove(self.refresh_token_filename)
             raise FileNotFoundError('Need to log in again')
-        raise Exception(f'Spotify Web API auth error - {result}')
+        raise Exception(f'Spotify Web API auth error - {result.text}')
 
     def _actual_token_request(self, token_params):
         req = requests.post(self.token_endpoint, data=token_params)
@@ -177,7 +177,7 @@ class Spoter:
                 if result.status_code < 400:
                     return result
             raise Exception(
-                f'Error in making a Spotify Web API request', result)
+                f'Error in making a Spotify Web API request', result.text)
 
         return wrapper
 
@@ -186,9 +186,10 @@ class Spoter:
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
+            item_id = args[0]
             try:
                 item_id = args[0]['id']
-            except (IndexError, KeyError): pass
+            except (KeyError, TypeError): pass
             return func(self, item_id, *args[1:], **kwargs)
 
         return wrapper
@@ -227,8 +228,10 @@ class Spoter:
         url = self.expand(url, **kwargs)
         return self.get(url).json()
 
-    def user_playlists(self):
-        return self.get(f'{self.base_url}/me/playlists').json()
+    def user_playlists(self, **kwargs):
+        url = f'{self.base_url}/me/playlists'
+        url = self.expand(url, **kwargs)
+        return self.get(url).json()
 
     @flexible_id
     def playlist_tracks(self, playlist_id, **kwargs):
@@ -237,12 +240,21 @@ class Spoter:
         return self.get(url).json()
 
     @flexible_id
-    def delete_tracks_from_playlist(self, playlist_id, tracks):
-        """ tracks should be a list of track URIs to be removed. """
+    def track(self, track_id):
+        url = f'{self.base_url}/tracks/{track_id}'
+        return self.get(url).json()
+
+    @flexible_id
+    def delete_tracks_from_playlist(self, playlist_id, track_ids):
         url = f'{self.base_url}/playlists/{playlist_id}/tracks'
+        print(url)
         data = {
-            "tracks": [ { "uri": uri } for uri in tracks ]
+            "tracks": [ 
+                { "uri": f'spotify:track:{track_id}' }
+                for track_id in track_ids
+            ]
         }
+        print(data)
         return self.delete(url, data=data)
 
 
@@ -274,7 +286,6 @@ if __name__ == '__main__':
     print('--------------------------------------------')
     result = spot.user_playlists()
     playlist = result['items'][-1]
-    pprint(playlist)
     tracks = spot.playlist_tracks(playlist, limit=5)
     for track in tracks['items']:
         print(track['track']['name'])
