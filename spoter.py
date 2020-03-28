@@ -218,13 +218,13 @@ class Spoter:
         return requests.delete(*args, **kwargs)
 
     @staticmethod
-    def expand(url, **params):
+    def _expand(url, **params):
         """ Adds url parameters to the url. Parameters with the value of None are not included.
 
-        >>> Spoter.expand('https://test.com', foo='bar')
+        >>> Spoter._expand('https://test.com', foo='bar')
         'https://test.com?foo=bar'
 
-        >>> Spoter.expand('https://test.com/search?q=foo&type=track', market='FI', limit=50, offset=None)
+        >>> Spoter._expand('https://test.com/search?q=foo&type=track', market='FI', limit=50, offset=None)
         'https://test.com/search?q=foo&type=track&market=FI&limit=50'
         """
         params = dict(filter(lambda item: item[1] is not None, params.items()))
@@ -246,16 +246,16 @@ class Spoter:
         """
         key_path = key_path.split('.')
         results = []
-        limit = kwargs.get('limit', 20)
         offset = kwargs.get('offset', 0)
         while True:
             kwargs['offset'] = offset
             result = func(*args, **kwargs)
+            total = result['total']
             for key in key_path:
                 result = result[key]
             results.extend(result)
             offset += len(result)
-            if len(result) < limit:
+            if offset == total:
                 break
         return results
 
@@ -265,19 +265,20 @@ class Spoter:
     def search(self, query_string, content_type, market=None, limit=None, offset=None, include_external=None):
         """ See https://developer.spotify.com/documentation/web-api/reference/search/search/ """
         url = f'{self.base_url}/search?q={quote(query_string)}&type={content_type}'
-        url = self.expand(url, market=market, limit=limit, offset=offset, include_external=include_external)
+        url = self._expand(url, market=market, limit=limit, offset=offset, include_external=include_external)
         return self.get(url).json()
 
     def user_playlists(self, limit=None, offset=None):
 
         url = f'{self.base_url}/me/playlists'
-        url = self.expand(url, limit=limit, offset=offset)
+        url = self._expand(url, limit=limit, offset=offset)
         return self.get(url).json()
 
     @flexible_id
-    def playlist_tracks(self, playlist_id, limit=None, offset=None):
+    def playlist_tracks(self, playlist_id, fields=None, limit=None, offset=None, market=None, additional_types=None):
         url = f'{self.base_url}/playlists/{playlist_id}/tracks'
-        url = self.expand(url, limit=limit, offset=offset)
+        url = self._expand(url, fields=fields, limit=limit, offset=offset, market=market,
+                           additional_types=additional_types)
         return self.get(url).json()
 
     @flexible_id
@@ -287,6 +288,8 @@ class Spoter:
 
     @flexible_id
     def delete_tracks_from_playlist(self, playlist_id, track_ids):
+        if type(track_ids) is not list:
+            track_ids = [track_ids]
         url = f'{self.base_url}/playlists/{playlist_id}/tracks'
         print(url)
         data = {
@@ -332,8 +335,7 @@ if __name__ == '__main__':
     print()
     print('Tracks for the first playlist in my playlists')
     print('--------------------------------------------')
-    result = spot.user_playlists()
-    playlist = result['items'][0]
-    tracks = spot.playlist_tracks(playlist, limit=50)
+    first_playlist = spot.user_playlists()['items'][0]
+    tracks = spot.playlist_tracks(first_playlist, limit=50)
     for track in tracks['items']:
         print(track['track']['name'])
