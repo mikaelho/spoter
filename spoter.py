@@ -34,7 +34,12 @@ class Spoter:
     def __init__(self,
                  client_id=None,
                  client_secret=None,
-                 scope='user-library-read',
+                 scope=' '.join([
+                     'playlist-read-private',
+                     'playlist-read-collaborative',
+                     'playlist-modify-public',
+                     'playlist-modify-private',
+                 ]),
                  refresh_token_file='~/Documents/spotify_refresh_token',
                  quiet=True):
         self.quiet = quiet
@@ -138,11 +143,11 @@ class Spoter:
         success, result = self._actual_token_request(token_params)
         if success:
             return
-        if result['error'] == 'invalid_grant':
+        if 'error' in result: #"['error'] == 'invalid_grant':
             self.access_token = None
             os.remove(self.refresh_token_filename)
             raise FileNotFoundError('Need to log in again')
-        raise Exception(f'Spotify Web API auth error - {result.text}')
+        raise Exception(f'Spotify Web API auth error - {result}')
 
     def _actual_token_request(self, token_params):
         req = requests.post(self.token_endpoint, data=token_params)
@@ -212,12 +217,47 @@ class Spoter:
     def delete(self, *args, **kwargs):
         return requests.delete(*args, **kwargs)
 
-    def expand(self, url, **params):
+    @staticmethod
+    def expand(url, **params):
+        """ Adds url parameters to the url.
+
+        >>> Spoter.expand('https://test.com', foo='bar')
+        'https://test.com?foo=bar'
+
+        >>> Spoter.expand('https://test.com/search?q=foo&type=track', market='FI', limit=50)
+        'https://test.com/search?q=foo&type=track&market=FI&limit=50'
+        """
+
         url_parts = list(urlparse(url))
         query = dict(parse_qs(url_parts[4]))
         query.update(params)
         url_parts[4] = urlencode(query, doseq=True)
         return urlunparse(url_parts)
+
+    def get_all(self, key_path, func, *args, **kwargs):
+        """ Retrieves all pages of a longer result.
+
+        Parameters:
+        * `key_path` - Lists of results are nested deeper in the result JSON. This parameter must contain the
+          pediod-separated key path to the result list. For example, key path of "tracks.items" is equivalent
+          to you locating the actual list in a single result with `result['tracks']['items']`.
+        * `func, *args, **kwargs` - Function to be repeatedly called including its regular parameters. You can
+          include `limit` and `offset` to control the "chunk size" and starting point of the result retrieval.
+        """
+        key_path = key_path.split('.')
+        results = []
+        limit = kwargs.get('limit', 20)
+        offset = kwargs.get('offset', 0)
+        while True:
+            kwargs['offset'] = offset
+            result = func(*args, **kwargs)
+            for key in key_path:
+                result = result[key]
+            results.extend(result)
+            offset += len(result)
+            if len(result) < limit:
+                break
+        return results
 
     def get_user_info(self):
         return self.get(f'{self.user_info_url}').json()
@@ -229,6 +269,7 @@ class Spoter:
         return self.get(url).json()
 
     def user_playlists(self, **kwargs):
+
         url = f'{self.base_url}/me/playlists'
         url = self.expand(url, **kwargs)
         return self.get(url).json()
@@ -278,20 +319,21 @@ if __name__ == '__main__':
     print('Search for 5 first playlists for "Medieval ambient" music')
     print('---------------------------------------------------------')
     result = spot.search('Medieval ambient', 'playlist', market='FI', limit=5)
-    for item in result['playlists']['items']:
-        print(item['name'])
-        
+    for i, item in enumerate(result['playlists']['items']):
+        print(f'{i:03}: {item["name"]}')
+
     print()
-    print('Tracks for the last playlist in my playlists')
+    print('All my playlists (getting all pages of results if necessary)')
+    print('------------------------------------------------------------')
+    result = spot.get_all('items', spot.user_playlists)
+    for i, playlist in enumerate(result):
+        print(f'{i:03}: {playlist["name"]}')
+
+    print()
+    print('Tracks for the first playlist in my playlists')
     print('--------------------------------------------')
     result = spot.user_playlists()
-    playlist = result['items'][-1]
-    tracks = spot.playlist_tracks(playlist, limit=5)
+    playlist = result['items'][0]
+    tracks = spot.playlist_tracks(playlist, limit=50)
     for track in tracks['items']:
         print(track['track']['name'])
-
-    
-    '''
-    from pprint import pprint
-    pprint(result)
-    '''
