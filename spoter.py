@@ -294,7 +294,7 @@ class Spoter:
         print(url)
         data = {
             "tracks": [ 
-                { "uri": f'spotify:track:{track_id}' }
+                { "uri": f"spotify:track:{track_id}" }
                 for track_id in track_ids
             ]
         }
