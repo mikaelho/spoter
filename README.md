@@ -38,29 +38,35 @@ Most methods have an ID as their first argument. This can be given as a plain ID
 
     get_user_info()
     
-Retrieve current user information ([Spotify documentation](https://developer.spotify.com/documentation/web-api/reference/users-profile/get-current-users-profile/)).
+Retrieve current user information ([Web API](https://developer.spotify.com/documentation/web-api/reference/users-profile/get-current-users-profile/)).
 
 #### Search for content
 
     search(query_string, content_type, market=None, limit=None, offset=None, include_external=None)
 
-Search different types of content in Spotify ([Spotify documentation](https://developer.spotify.com/documentation/web-api/reference/search/search/)).
+Search different types of content in Spotify ([Web API](https://developer.spotify.com/documentation/web-api/reference/search/search/)).
 
 See [here](https://support.spotify.com/us/using_spotify/features/search/) for the advanced keywords that can be used in the search query.
 
 Valid values for `content_type` are: album, artist, playlist, track, show and episode. You can provide a comma-separated list of several types.
 
+#### Get information for a specific track
+
+    track(track_id)
+    
+See [Web API](https://developer.spotify.com/documentation/web-api/reference/tracks/get-track/).
+
 #### Get user's playlists
 
     user_playlists(limit=None, offset=None)
     
-See [Spotify documentation](https://developer.spotify.com/documentation/web-api/reference/playlists/get-a-list-of-current-users-playlists/). All of the playlist [scopes](https://developer.spotify.com/documentation/general/guides/scopes/#overview) are needed to reliably receive all playlists.
+See [Web API](https://developer.spotify.com/documentation/web-api/reference/playlists/get-a-list-of-current-users-playlists/). All of the playlist [scopes](https://developer.spotify.com/documentation/general/guides/scopes/#overview) are needed to reliably receive all playlists.
 
 #### Get tracks in a playlist
 
     playlist_tracks(playlist_id, fields=None, limit=None, offset=None, market=None, additional_types=None)
 
-See [Spotify documentation](https://developer.spotify.com/documentation/web-api/reference/playlists/get-playlists-tracks/).
+See [Web API](https://developer.spotify.com/documentation/web-api/reference/playlists/get-playlists-tracks/).
 
 #### Delete tracks from a playlist
 
@@ -68,7 +74,7 @@ See [Spotify documentation](https://developer.spotify.com/documentation/web-api/
     
 Delete either a single track or a list of tracks by ID from the given playlist.
 
-See [Spotify documentation](https://developer.spotify.com/documentation/web-api/reference/playlists/remove-tracks-playlist/).
+See [Web API](https://developer.spotify.com/documentation/web-api/reference/playlists/remove-tracks-playlist/).
 
 #### Retrieve all pages of a long list
 
